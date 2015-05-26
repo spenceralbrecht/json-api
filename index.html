@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>JSON API by ethanresnick</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">JSON API</h1>
+      <h2 class="project-tagline">A full-blown JSON API server, with documentation, generated automatically from your Nodejs app.</h2>
+      <a href="https://github.com/ethanresnick/json-api" class="btn">View on GitHub</a>
+      <a href="https://github.com/ethanresnick/json-api/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/ethanresnick/json-api/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="json-api-" class="anchor" href="#json-api-" aria-hidden="true"><span class="octicon octicon-link"></span></a>json-api <img src="https://circleci.com/gh/ethanresnick/json-api.png?0d6d9ba9db7f15eb6363c6fd93408526bef06035&amp;style=shield" alt="CircleCI Badge">
+</h1>
+
+<p>This library creates a <a href="http://jsonapi.org/">JSON API</a>-compliant REST API from your Node app. And it generates API documentation automatically.</p>
+
+<p>It currently integrates with <a href="http://expressjs.com/">Express</a> apps that use <a href="http://mongoosejs.com/">Mongoose</a> models, but it can easily be integrated with other frameworks and databases. If you want to see an integration with another stack, just open an issue!</p>
+
+<p><em>Heads up:</em> The JSON-API spec isn't quite at version 1.0 yet, nor does this library yet implement the whole spec. In particular, some advanced routes do not work and the library's API is subject to change. That said, all the basic CRUD operations are supported and development is progressing very quickly. The goal is to have the entire spec implemented by the time the final JSON API spec is officially released.</p>
+
+<h1>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h1>
+
+<p><code>$ npm install json-api</code></p>
+
+<p><em>On Versioning</em>: After the JSON API spec is finalized, this library's major version will be bumped to 3.0.0 and it will use semantic versioning going forward. Until then, the 2.x versions should be considered like this library's second "major version zero"—which is needed only because the 1.0 version of this library was stable and used in production for a while.</p>
+
+<h1>
+<a id="example-api" class="anchor" href="#example-api" aria-hidden="true"><span class="octicon octicon-link"></span></a>Example API</h1>
+
+<p>Check out the <a href="http://github.com/ethanresnick/json-api-example">full, working example repo</a> for all the details on building an API with this library. Or, take a look at the basic example below:</p>
+
+<div class="highlight highlight-javascript"><pre>  <span class="pl-k">var</span> app <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>express<span class="pl-pds">'</span></span>)()
+    , <span class="pl-c1">API</span> <span class="pl-k">=</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>json-api<span class="pl-pds">'</span></span>);
+
+  <span class="pl-k">var</span> models <span class="pl-k">=</span> {
+    <span class="pl-s"><span class="pl-pds">"</span>Person<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>./models/person<span class="pl-pds">'</span></span>),
+    <span class="pl-s"><span class="pl-pds">"</span>Place<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-c1">require</span>(<span class="pl-s"><span class="pl-pds">'</span>./models/place<span class="pl-pds">'</span></span>)
+  };
+
+  <span class="pl-k">var</span> registry <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">API.ResourceTypeRegistry</span>();
+  <span class="pl-k">var</span> adapter <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">API.adapters</span>.Mongoose(models);
+
+  registry.<span class="pl-c1">type</span>(<span class="pl-s"><span class="pl-pds">"</span>people<span class="pl-pds">"</span></span>, {
+    adapter<span class="pl-k">:</span> adapter,
+    urlTemplates<span class="pl-k">:</span> {
+      <span class="pl-s"><span class="pl-pds">"</span>self<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>/people/{id}<span class="pl-pds">"</span></span>
+    }
+  });
+
+  registry.<span class="pl-c1">type</span>(<span class="pl-s"><span class="pl-pds">"</span>places<span class="pl-pds">"</span></span>, {
+    adapter<span class="pl-k">:</span> adapter,
+    urlTemplates<span class="pl-k">:</span> {<span class="pl-s"><span class="pl-pds">"</span>self<span class="pl-pds">"</span></span><span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>/places/{id}<span class="pl-pds">"</span></span>}
+  });
+
+  <span class="pl-c">// Initialize the automatic documentation.</span>
+  <span class="pl-c">// Note: don't do this til after you've registered all your resources.</span>
+  <span class="pl-k">var</span> DocsController <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">API.controllers</span>.Documentation(registry, {name<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">'</span>Example API<span class="pl-pds">'</span></span>});
+
+  <span class="pl-c">// Set up our controllers</span>
+  <span class="pl-k">var</span> APIController <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">API.controllers</span>.API(registry);
+  <span class="pl-k">var</span> Front <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">API.controllers</span>.Front(APIController, DocsController);
+  <span class="pl-k">var</span> requestHandler <span class="pl-k">=</span> Front.apiRequest.bind(Front);
+
+  <span class="pl-c">// Add routes for basic list, read, create, update, delete operations</span>
+  app.get(<span class="pl-s"><span class="pl-pds">"</span>/:type(people|places)<span class="pl-pds">"</span></span>, requestHandler);
+  app.get(<span class="pl-s"><span class="pl-pds">"</span>/:type(people|places)/:id<span class="pl-pds">"</span></span>, requestHandler);
+  app.post(<span class="pl-s"><span class="pl-pds">"</span>/:type(people|places)<span class="pl-pds">"</span></span>, requestHandler);
+  app.patch(<span class="pl-s"><span class="pl-pds">"</span>/:type(people|places)/:id<span class="pl-pds">"</span></span>, requestHandler);
+  app.delete(<span class="pl-s"><span class="pl-pds">"</span>/:type(people|places)/:id<span class="pl-pds">"</span></span>, requestHandler);
+
+  <span class="pl-c">// Add routes for adding to, removing from, or updating resource relationships</span>
+  app.post(<span class="pl-s"><span class="pl-pds">"</span>/:type(people|places)/:id/links/:relationship<span class="pl-pds">"</span></span>, requestHandler);
+  app.patch(<span class="pl-s"><span class="pl-pds">"</span>/:type(people|places)/:id/links/:relationship<span class="pl-pds">"</span></span>, requestHandler);
+  app.delete(<span class="pl-s"><span class="pl-pds">"</span>/:type(people|places)/:id/links/:relationship<span class="pl-pds">"</span></span>, requestHandler);
+
+
+  app.listen(<span class="pl-c1">3000</span>);</pre></div>
+
+<h1>
+<a id="core-concepts" class="anchor" href="#core-concepts" aria-hidden="true"><span class="octicon octicon-link"></span></a>Core Concepts</h1>
+
+<h2>
+<a id="resource-type-descriptions-" class="anchor" href="#resource-type-descriptions-" aria-hidden="true"><span class="octicon octicon-link"></span></a>Resource Type Descriptions <a name="resource-type-descriptions"></a>
+</h2>
+
+<p>The JSON-API spec is built around the idea of typed resource collections. For example, you can have a <code>"people"</code> collection and a <code>"companies"</code> collection. (By convention, type names are plural and lowercase.)</p>
+
+<p>To use this library, you describe the special behavior (if any) that resources of each type should have, and then register that description with a central <code>ResourceTypeRegistry</code>. Then the library takes care of the rest. A resource type description is simply an object with the following properties:</p>
+
+<ul>
+<li>
+<code>urlTemplates</code>: an object containing url templates used to output the json for resources of the type being described. Currently, the supported keys are: "self", which defines the template used for building <a href="http://jsonapi.org/format/#document-structure-resource-urls">resource urls</a> of that type, and "relationhsip", which defines the template that will be used for <a href="http://jsonapi.org/format/#fetching-relationships">relationship urls</a>.</li>
+<li><p><code>adapter</code>: the <a href="#adapters">adapter</a> used to find and update these resources. By specifying this for each resource type, different resource types can live in different kinds of databases.</p></li>
+<li><p><a name="before-render"></a><code>beforeRender</code> (optional): a function called on each resource after it's found by the adapter but before it's sent to the client. This lets you do things like hide fields that some users aren't authorized to see.</p></li>
+<li><p><a name="before-save"></a><code>beforeSave</code> (optional): a function called on each resource provided by the client (i.e. in a <code>POST</code> or <code>PUT</code> request) before it's sent to the adapter for saving. You can transform the data here to make it valid.</p></li>
+<li><p><a name="labels"></a><code>labelMappers</code> (optional): this lets you create urls (or, in REST terminology, resources) that map to different database items over time. For example, you could have a <code>/events/upcoming</code> resource or a <code>/users/me</code> resource. In those examples, "upcoming" and "me" are called the labels and, in labelMappers, you provide a function that maps each label to the proper database id(s) at any given time. The function can return a Promise if needed.</p></li>
+<li><p><a name="parentType"></a><code>parentType</code> (optional): this allows you to designate one resource type being a sub-type of another (its <code>parentType</code>). This is often used when you have two resource types that live in the same database table/collection, and their type is determined with a discriminator key. See the <a href="https://github.com/ethanresnick/json-api-example/blob/master/src/resource-descriptions/schools.js#L2"><code>schools</code> type</a> in the example repository.</p></li>
+<li><p><a name="info"></a><code>info</code> (optional): this allows you to provide extra information about the resource that will be included in the documentation. Available properties are <code>"description"</code> (a string describing what resources of this type are) and <code>"fields"</code>. <code>"fields"</code> holds an object in which you can describe each field in the resource (e.g. listing validation rules). See the <a href="https://github.com/ethanresnick/json-api-example/blob/master/src/resource-descriptions/schools.js">example implemenation</a> for more details.</p></li>
+</ul>
+
+<h2>
+<a id="routing-authentication--controllers" class="anchor" href="#routing-authentication--controllers" aria-hidden="true"><span class="octicon octicon-link"></span></a>Routing, Authentication &amp; Controllers</h2>
+
+<p>This library gives you a Front controller (shown in the example) that can handle requests for API results or for the documentation. But the library doesn't prescribe how requests get to this controller. This allows you to use any url scheme, routing layer, or authentication system you already have in place. You just need to make sure that: <code>req.params.type</code> reflects the requested resource type; <code>req.params.id</code> or (if you want to allow labels on a request) <code>req.params.idOrLabel</code> reflects the requested id, if any; and <code>req.params.relationship</code> reflects the relationship name, in the event that the user is requesting a relationship url.</p>
+
+<p>In the example above, routing is handled with Express's built-in <code>app[VERB]</code> methods, and the three parameters are set properly using express's built-in <code>:param</code> syntax. If you're looking for something more robust, you might be interested in <a href="https://github.com/ethanresnick/express-simple-router">Express Simple Router</a>. For authentication, check out <a href="https://github.com/ethanresnick/express-simple-firewall">Express Simple Firewall</a>.</p>
+
+<h2>
+<a id="adapters" class="anchor" href="#adapters" aria-hidden="true"><span class="octicon octicon-link"></span></a>Adapters</h2>
+
+<p>An adapter handles all the interaction with the database. It is responsible for turning requests into standard <a href="https://github.com/ethanresnick/json-api/blob/master/src/types/Resource.js"><code>Resource</code></a> or <a href="https://github.com/ethanresnick/json-api/blob/master/src/types/Collection.js"><code>Collection</code></a> objects that the rest of the library will use. See the built-in <a href="https://github.com/ethanresnick/json-api/blob/master/src/adapters/Mongoose/MongooseAdapter.js">MongooseAdapter</a> for an example.</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/ethanresnick/json-api">JSON API</a> is maintained by <a href="https://github.com/ethanresnick">ethanresnick</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
+
