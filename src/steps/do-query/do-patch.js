@@ -1,6 +1,7 @@
 import APIError from "../../types/APIError";
 import Collection from "../../types/Collection";
 import Resource from "../../types/Resource";
+import Relationship from "../../types/Relationship";
 import Linkage from "../../types/Linkage";
 
 export default function(requestContext, responseContext, registry) {
@@ -34,7 +35,8 @@ export default function(requestContext, responseContext, registry) {
     changedResourceOrCollection = new Resource(
       requestContext.type,
       requestContext.idOrIds,
-      {[requestContext.relationship]: requestContext.primary}
+      undefined,
+      {[requestContext.relationship]: new Relationship(requestContext.primary) }
     );
   }
 
